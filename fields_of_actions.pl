@@ -1,7 +1,42 @@
-:- include('tabuleiro.pl').
+:- include('Interface.pl').
+:- include('Logica.pl').
+:- include('Menus.pl').
 :- include('Utilitarios.pl').
 
 
-fields_of_action :-
+tabuleiro([ [1-8 ,1-7, 1-6 ,1-5, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0,1-12,1-11,1-10, 1-9],
+            [1-4, 1-3, 1-2, 1-1, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 2-13, 0-0, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 2-1, 2-2, 2-3, 2-4],
+            [2-9,2-10,2-11,2-12, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 2-5, 2-6, 2-7, 2-8]]).
+
+tabuleiro([ [1-8 ,1-7, 1-6 ,1-5, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0,1-12,1-11,1-10, 1-9],
+            [1-4, 1-3, 1-2, 1-1, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 2-1, 2-2, 2-3, 2-4],
+            [2-9,2-10,2-11,2-12, 0-0, 0-0, 0-0, 0-0],
+            [0-0, 0-0, 0-0, 0-0, 2-5, 2-6, 2-7, 2-8]]).
+
+fields_of_action(J,  Peca, Jogadas):- 
     tabuleiro(Board),
-    display_game(Board,1).
+    verificaQuantJogadas(J, Board, Jogadas)
+    /* menuJogo */.
+
+:- use_module(library(lists)).
+
+ 
+
+
+
+
+captura(1-1).
+captura(2-2).
+captura(1-5).
+
+pecasColhidas(L1,L,J) :- captura(J-X), not(member(X, L1)) ,append(L1,[X],List), pecasColhidas(List,L,J). 
+pecasColhidas(L,L,_). 

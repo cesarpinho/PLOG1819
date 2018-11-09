@@ -1,22 +1,12 @@
-
-tabuleiro([ [1-8 ,1-7, 1-6 ,1-5, 0-0, 0-0, 0-0, 0-0],
-            [0-0, 0-0, 0-0, 0-0,1-12,1-11,1-10, 1-9],
-            [1-4, 1-3, 1-2, 1-1, 0-0, 0-0, 0-0, 0-0],
-            [0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0],
-            [0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0, 0-0],
-            [0-0, 0-0, 0-0, 0-0, 2-1, 2-2, 2-3, 2-4],
-            [2-9,2-10,2-11,2-12, 0-0, 0-0, 0-0, 0-0],
-            [0-0, 0-0, 0-0, 0-0, 2-5, 2-6, 2-7, 2-8]]).
-
-display_game(Board, Player) :-
-    tamanhoTabuleiro(Board, Col, Lin),
-    nl,
+imprimeJogo(Board, Jogador, Lin, Col) :-
+    novaLinha(1),
     imprimeNCol(Col),
-    nl,
+    novaLinha(1),
     imprimeTab(Board, Lin, Col),
     imprimeNCol(Col),
-    nl.
-
+    novaLinha(1),
+    write('--> Jogador ',Jogador),
+    novaLinha(1).
 
 imprimeNCol(N) :-
     espaco(6),
@@ -42,20 +32,20 @@ imprimeNumLin(N) :-
 
 imprimeSeparLin(Col) :-
     espaco(3),
-    write('------'),
+    write("------"),
     N1 is Col - 1,
     imprimeSeparLin(N1, Col).
 
 imprimeSeparLin(N, Col) :-
     N > 0, !,
-    write('-----'),
+    write("-----"),
     N1 is N - 1,
     imprimeSeparLin(N1, Col).
 
 imprimeSeparLin(0, _) :- nl.
 
 imprimeSeparCol :-
-    write(' | ').
+    write(" | ").
 
 imprimeNumLin_e_SeparCol(NumL) :-
     NumL > 0,
@@ -78,7 +68,7 @@ imprimeTab([L|T], NumL, Col) :-
 
     imprimeLinhaPeca(L),
 
-    nl,
+    novaLinha(1),
     NextL is NumL - 1,
     imprimeTab(T, NextL, Col).
 
@@ -100,8 +90,8 @@ imprimeLinhaPeca([C|L]) :-
     imprimeLinhaPeca(L).
 
 imprimeJogador(0-0) :- espaco(2).
-imprimeJogador(1-_) :- write('B'), espaco(1).
-imprimeJogador(2-_) :- write('W'), espaco(1).
+imprimeJogador(1-_) :- write("B"), espaco(1).
+imprimeJogador(2-_) :- write("W"), espaco(1).
 
 imprimePeca(0-0) :- espaco(2).
 imprimePeca(_-X) :- X < 10, espaco(1), write(X).
