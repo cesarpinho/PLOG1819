@@ -1,3 +1,7 @@
+
+
+display_game(+Board,+Player).
+
 imprimeJogo(Board, Jogador, Lin, Col) :-
     novaLinha(1),
     imprimeNCol(Col),
@@ -5,7 +9,8 @@ imprimeJogo(Board, Jogador, Lin, Col) :-
     imprimeTab(Board, Lin, Col),
     imprimeNCol(Col),
     novaLinha(1),
-    write('--> Jogador ',Jogador),
+    write('--> Jogador '),
+    write(Jogador),
     novaLinha(1).
 
 imprimeNCol(N) :-
@@ -32,20 +37,20 @@ imprimeNumLin(N) :-
 
 imprimeSeparLin(Col) :-
     espaco(3),
-    write("------"),
+    write('------'),
     N1 is Col - 1,
     imprimeSeparLin(N1, Col).
 
 imprimeSeparLin(N, Col) :-
     N > 0, !,
-    write("-----"),
+    write('-----'),
     N1 is N - 1,
     imprimeSeparLin(N1, Col).
 
 imprimeSeparLin(0, _) :- nl.
 
 imprimeSeparCol :-
-    write(" | ").
+    write(' | ').
 
 imprimeNumLin_e_SeparCol(NumL) :-
     NumL > 0,
@@ -90,8 +95,8 @@ imprimeLinhaPeca([C|L]) :-
     imprimeLinhaPeca(L).
 
 imprimeJogador(0-0) :- espaco(2).
-imprimeJogador(1-_) :- write("B"), espaco(1).
-imprimeJogador(2-_) :- write("W"), espaco(1).
+imprimeJogador(1-_) :- write('B'), espaco(1).
+imprimeJogador(2-_) :- write('W'), espaco(1).
 
 imprimePeca(0-0) :- espaco(2).
 imprimePeca(_-X) :- X < 10, espaco(1), write(X).
