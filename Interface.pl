@@ -27,7 +27,7 @@ print_move(L-C-NewL-NewC-_, Lines) :-
     write(NewLin),
     new_line(2).
 
-/* Imprme as pecas que foram capturads pelo vencedor deo jogo */
+/* Imprme as pecas que foram capturads pelo vencedor do jogo */
 display_catched_pieces(1, [P|Pieces]) :-
     space(3),
     display_player(2-_),
@@ -54,7 +54,12 @@ display_game(Board, Player, Lin, Col) :-
     new_line(2),
     write('--> Jogador '),
     write(Player),
-    new_line(2).
+    new_line(1),
+    catched_pieces(Player, Pieces),
+    sort(Pieces, OrderedPieces),
+    write('  PECAS CAPTURADAS :\n'),
+    display_catched_pieces(Player,OrderedPieces),
+    new_line(1).
 
 /* Imprime a numeração das colunas */
 display_col_num(N) :-

@@ -182,7 +182,7 @@ game_over(1) :-
     write('\nJOGADOR '),
     write(1),
     write(' SEM MOVIMENTOS POSSIVEIS\n'),
-    pecasCapturadas([], Pieces, 2),
+    catched_pieces(2, Pieces),
     sort(Pieces, OrderedPieces),
     game_over(2, OrderedPieces).
 
@@ -190,6 +190,6 @@ game_over(2) :-
     write('\nJOGADOR '),
     write(2),
     write(' SEM MOVIMENTOS POSSIVEIS\n'),
-    pecasCapturadas([], Pieces, 2),
+    catched_pieces(1, Pieces),
     sort(Pieces, OrderedPieces),
     game_over(1, OrderedPieces).
