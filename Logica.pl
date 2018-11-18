@@ -30,7 +30,7 @@ play(Board, Player, computer2, Type) :-
     is_game_over(GameOver), GameOver == false,
     board_size(Board, Lines, Columns),
     display_game(Board, Player, Lines, Columns),
-    valid_moves(Board, Player, Lines, Columns, ListOfMoves),
+    valid_moves(Board, Player, Lines, Columns, ListOfMoves),   
     choose_move(Board, Player, computer2, ListOfMoves, Move),
     move(Player, Board, Lines, Columns, Move, NewBoard),
     wait_enter,
@@ -42,7 +42,7 @@ choose_piece(Player, Board, Piece) :-
     write('Escolha o numero da peca que pretende mover : '),
     get_number(Choice),
     new_line(1),
-    exist_piece(Player,Board, Choice), 
+    exist_piece(Player,Board, Choice), !,
     Piece = Choice.
 choose_piece(_, _, _) :-
     write('Erro: Peca nao existente.'),
@@ -110,7 +110,7 @@ check_quant_plays(_, _, _).
 check_quant_plays(Player, Board, Piece, []) :-
     P is Piece + 1,
     check_other_pieces(Player, Board, P),
-    write('A peca escolhida nao tem movimentos possiveis. \n'),
+    write('A peca escolhida nao tem movimentos possiveis. \n\n'),
     !, fail.
 check_quant_plays(_, _, _, L) :- tail(L, _).
 
@@ -138,8 +138,8 @@ choose_move(_, _, _, _, Lines, Plays, Move) :-
     nth1(Choice, Plays, Move), !.
 
 choose_move(Player, Board, Type1, Type2, _, _, _) :-
-    get_number(Code),
-    Code =:= 48, !,
+    get_number(Choice), 
+    Choice =:= 0, !,
     play(Board, Player, Type1, Type2).
 
 choose_move(Player, Board, Type1, Type2, Lines, Plays, Move) :-
@@ -176,7 +176,7 @@ check_vitory(_).
 
 /* Verifica se existe alguma sequencia de numeros, e retorna a maior sequencia existente */
 check_sequence([X|Pieces], FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
-    check_sequence([X|Pieces], 1, X-X, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
+    check_sequence([X|Pieces], 1, X-X, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq), !.
 
 check_sequence([], _, _, 0-0, 0).
 check_sequence([X|Pieces], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-

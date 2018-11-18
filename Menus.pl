@@ -1,9 +1,12 @@
-display_start_menu :-
+display_header :-
     write('*******************************************************\n'),
     write('****                                               ****\n'),
     write('****                FIELDS OF ACTION               ****\n'),
     write('****                                               ****\n'),
-    write('*******************************************************\n'),
+    write('*******************************************************\n').
+
+display_start_menu :-
+    display_header,
     write('****                                               ****\n'),
     write('****                                               ****\n'),
     write('****                    1 - Jogar                  ****\n'),
@@ -26,11 +29,7 @@ start_menu :-
     ).
 
 display_about_menu :-
-    write('*******************************************************\n'),
-    write('****                                               ****\n'),
-    write('****                FIELDS OF ACTION               ****\n'),
-    write('****                                               ****\n'),
-    write('*******************************************************\n'),
+    display_header,
     write('****                                               ****\n'),
     write('****                    Autores:                   ****\n'),
 	write('****                - Angelo Moura                 ****\n'),
@@ -53,11 +52,7 @@ about_menu :-
     ).  
 
 display_choose_game_menu :-
-    write('*******************************************************\n'),
-    write('****                                               ****\n'),
-    write('****                FIELDS OF ACTION               ****\n'),
-    write('****                                               ****\n'),
-    write('*******************************************************\n'),
+    display_header,
     write('****                                               ****\n'),
     write('****            1 - Jogador vs Jogador             ****\n'),
     write('****            2 - Jogador vs Computador          ****\n'),
@@ -81,11 +76,7 @@ choose_game_menu :-
     ).
 
 display_choose_level_menu :-
-    write('*******************************************************\n'),
-    write('****                                               ****\n'),
-    write('****                FIELDS OF ACTION               ****\n'),
-    write('****                                               ****\n'),
-    write('*******************************************************\n'),
+    display_header,
     write('****                                               ****\n'),
     write('****                   1 - Facil                   ****\n'),
     write('****                   2 - Dificil                 ****\n'),
@@ -159,6 +150,8 @@ start_game :-
     ).
 
 choose_player(Choice) :- 
+    clr,
+    display_header,
     write('\n O jogador com as pecas pretas e o primeiro a jogar.\n'),
     write(' Qual as pecas que prefere?\n'),
     write('   1 - Pretas  (Jogador 1)\n'),
@@ -178,9 +171,9 @@ game_over(Player, Pieces) :-
     abolish(catch/1),
 
     new_line(1),
-    write('***********************************************\n'),
-    write('**            VENCEDOR :: JOGADOR '), write(Player), write('            **\n'),
-    write('***********************************************\n'),
+    write('*******************************************************\n'),
+    write('**               VENCEDOR :: JOGADOR '), write(Player), write('               **\n'),
+    write('*******************************************************\n'),
     write('  PECAS CAPTURADAS :\n'),
     display_catched_pieces(Player,Pieces),
     asserta(is_game_over(true)).
@@ -200,16 +193,3 @@ game_over(2) :-
     pecasCapturadas([], Pieces, 2),
     sort(Pieces, OrderedPieces),
     game_over(1, OrderedPieces).
-
-    
-
-
-
-     
-    
-
-
-    
-
-    
-    

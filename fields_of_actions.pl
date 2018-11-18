@@ -27,3 +27,9 @@ board([ [1-8 ,1-7, 1-6 ,1-5, 0-0, 0-0, 0-0, 0-0],
 
 play :- 
     start_menu.
+
+catch(2-1).
+catch(2-2).
+catch(2-3).
+catch(2-4).
+catch(2-5).

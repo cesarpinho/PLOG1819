@@ -45,6 +45,8 @@ display_catched_pieces(_, []).
 /* Imprime o tabuleiro de jogo e a numeração de linhas e colunas */
 display_game(Board, Player, Lin, Col) :-
     clr,
+    display_header,
+    new_line(1),
     display_col_num(Col),
     new_line(1),
     display_board(Board, Lin, Col),
@@ -56,7 +58,7 @@ display_game(Board, Player, Lin, Col) :-
 
 /* Imprime a numeração das colunas */
 display_col_num(N) :-
-    space(6),
+    space(10),
     Letter is 65,
     put_code(Letter),    
     space(2),
@@ -79,7 +81,7 @@ display_lin_num(N) :-
 
 /* Imprime o separador de linhas */
 display_lin_separ(Col) :-
-    space(3),
+    space(7),
     write('------'),
     N1 is Col - 1,
     display_lin_separ(N1, Col).
@@ -97,12 +99,12 @@ display_col_separ :-
 /* Imprime o separador de colunas e o numero da linha */
 display_lin_num_and_col_separ(NumL) :-
     NumL > 0,
-    space(1),
+    space(5),
     display_lin_num(NumL),
     display_col_separ.
 
 display_lin_num_and_col_separ(0) :-
-    space(2),
+    space(6),
     display_col_separ.
 
 /* Imprime o tabuleiro */

@@ -25,16 +25,16 @@ choose_move(_, _, computer1, ListOfMoves, Move) :-
     random_member(Move, ListOfMoves).
 
 choose_move(Board, Player, computer2, ListOfMoves, Move) :-
-    board_size(Board, Lines, Columns),
-    choose_best_move(Board, Player, Lines, Columns, ListOfMoves, _, L-C-NewL-NewC-Play), 
-    Play =:= 0,
+    board_size(Board, Lines, Columns),  
+    choose_best_move(Board, Player, Lines, Columns, ListOfMoves, _, _-_-_-_-Play), 
+    Play =:= 0,    
     random_member(Move, ListOfMoves).
 
 choose_move(Board, Player, computer2, ListOfMoves, Move) :-
     board_size(Board, Lines, Columns),
     choose_best_move(Board, Player, Lines, Columns, ListOfMoves, _, Move).
 
-/* Escolhe a melhor jogada tenod em conta apenas as possiveis */
+/* Escolhe a melhor jogada tendo em conta apenas as possiveis */
 choose_best_move(_, _, _, _, [], -1, _).
 choose_best_move(Board, Player, Lines, Columns, [L-C-NewL-NewC-Play|ListOfMoves], Value, Move) :-
     Play =\= 0,
@@ -46,7 +46,7 @@ choose_best_move(Board, Player, Lines, Columns, [L-C-NewL-NewC-Play|ListOfMoves]
         Peca =:= LastSeqPiece + 1
     ),
     Value2 is Value1 + 5,
-    Move1 = L-C-NewL-NewC-Play,
+    Move1 = L-C-NewL-NewC-Play, !,
     choose_best_move(Board, Player, Lines, Columns, ListOfMoves, Value3, Move2),
     save_move(Value2, Move1, Value3, Move2, Value, Move).
 
@@ -60,7 +60,7 @@ choose_best_move(Board, Player, Lines, Columns, [L-C-NewL-NewC-Play|ListOfMoves]
         Peca =:= LastSeqPiece + 2
     ),
     Value2 is Value1 + 4,
-    Move1 = L-C-NewL-NewC-Play,
+    Move1 = L-C-NewL-NewC-Play,!,
     choose_best_move(Board, Player, Lines, Columns, ListOfMoves, Value3, Move2),
     save_move(Value2, Move1, Value3, Move2, Value, Move).
 
@@ -71,14 +71,14 @@ choose_best_move(Board, Player, Lines, Columns, [L-C-NewL-NewC-Play|ListOfMoves]
     empty_cel(V),
     replace(Board1, V, L, C, NewBoard),
     value(NewBoard, Player, _, Value1),
-    Move1 = L-C-NewL-NewC-Play,
+    Move1 = L-C-NewL-NewC-Play,!,
     choose_best_move(Board, Player, Lines, Columns, ListOfMoves, Value2, Move2),
     save_move(Value1, Move1, Value2, Move2, Value, Move).
 
 choose_best_move(Board, Player, Lines, Columns, [L-C-NewL-NewC-Play|ListOfMoves], Value, Move) :-
-    Play == 0,
+    Play =:= 0,    
     Value1 = 0,
-    Move1 = L-C-NewL-NewC-Play,
+    Move1 = L-C-NewL-NewC-Play,!,
     choose_best_move(Board, Player, Lines, Columns, ListOfMoves, Value2, Move2),
     save_move(Value1, Move1, Value2, Move2, Value, Move).
 
