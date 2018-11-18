@@ -70,15 +70,15 @@ get_number(Choice) :-
     Num2 is Code2 - 48,
     Choice is Num1 * 10 + Num2,
     skip_line, !,
-    abolish(choice/1).
+    retractall(choice(_)).
 
 get_number(Choice) :-
     choice(Choice),
     Choice == 10, 
-    abolish(choice/1),
+    retractall(choice(_)),
     !, fail.
 
 get_number(Choice) :-
     choice(Choice),
     skip_line,
-    abolish(choice/1).
+    retractall(choice(_)).
