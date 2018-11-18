@@ -1,7 +1,7 @@
 /* Predicado principal de Jogo */
 play(_, _, _, _) :-
     is_game_over(GameOver), GameOver == true,
-    abolish(is_game_over/1).
+    retractall(is_game_over(_)).
 
 play(Board, Player, human, Type) :-
     is_game_over(GameOver), GameOver == false,

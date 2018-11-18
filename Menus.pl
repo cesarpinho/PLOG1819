@@ -168,7 +168,7 @@ check_choice_player(_) :-
     start_game.
 
 game_over(Player, Pieces) :-
-    abolish(catch/1),
+    retractall(catch(_)),
 
     new_line(1),
     write('*******************************************************\n'),
