@@ -1,76 +1,74 @@
+:- dynamic is_game_over/1.
 
 % TODO : menuInicial % escolher o tipo de jogo (J-J, J-C, C-C)
 
-menuJogo :-
-    tabuleiro(Board),
-    escolhaJogador(J),
-    play(Board,J).
+game_menu :-
+    asserta(is_game_over(false)),
+    board(Board),
+    choose_player(J),
+    play_game(Board, J).
 
-escolhaJogador(Escolha) :- 
+play_game(Board, 1) :- play(Board,1, human, computer2).
+play_game(Board, 2) :- play(Board,1, computer2, computer2).
+play_game(Board, 3).
+
+choose_player(Choice) :- 
     write('\n O jogador com as pecas pretas e o primeiro a jogar.\n'),
     write(' Qual as pecas que prefere?\n'),
     write('   1 - Pretas\n'),
     write('   2 - Brancas\n'),
     write('   3 - Sair\n Escolha: '),
-    getCode(Escolha),
-    validaEscolhaJogador(Escolha).
+    getCode(Choice),
+    check_choice_player(Choice).
 
-validaEscolhaJogador(1).
-validaEscolhaJogador(2).
-validaEscolhaJogador(3) :- !, fail.
-validaEscolhaJogador(_) :-
+check_choice_player(1).
+check_choice_player(2).
+check_choice_player(3).
+check_choice_player(_) :-
     write('Erro: Escolha invalida.\n'),
-    skip_line,
-    menuJogo.
+    game_menu.
 
+game_over(Player, Pieces) :-
+    abolish(catch/1),
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-game_over(+Board, -Winner).
-
-
-menuVitoria(Jogador, Pecas) :-
-    abolish(captura/1),
-
-    novaLinha(1),
+    new_line(1),
     write('*********************************************\n'),
-    write('**          VENCEDOR :: JOGADOR '),
-    write(Jogador),
-    write('          **\n'),
+    write('**          VENCEDOR :: JOGADOR '), write(Player), write('          **\n'),
     write('*********************************************\n'),
     write('  PECAS CAPTURADAS :\n'),
-    imprimePecasCapturadas(Jogador,Pecas), break
-    .
+    display_catched_pieces(Player,Pieces),
+    asserta(is_game_over(true)).
 
-imprimePecasCapturadas(1, [P|Pecas]) :-
-    espaco(3),
-    imprimeJogador(2-_),
-    imprimePeca(_-P),
-    novaLinha(1),
-    imprimePecasCapturadas(1, Pecas).
-imprimePecasCapturadas(2, [P|Pecas]) :-
-    espaco(3),
-    imprimeJogador(1-_),
-    imprimePeca(_-P),
-    novaLinha(1),
-    imprimePecasCapturadas(2, Pecas).
-imprimePecasCapturadas(_, []).
+display_catched_pieces(1, [P|Pieces]) :-
+    space(3),
+    display_player(2-_),
+    display_piece(_-P),
+    new_line(1),
+    display_catched_pieces(1, Pieces).
+display_catched_pieces(2, [P|Pieces]) :-
+    space(3),
+    display_player(1-_),
+    display_piece(_-P),
+    new_line(1),
+    display_catched_pieces(2, Pieces).
+display_catched_pieces(_, []).
 
 
-menuGameOver(1) :-
+game_over(1) :-
     write('\nJOGADOR '),
     write(1),
     write(' SEM MOVIMENTOS POSSIVEIS\n'),
-    pecasCapturadas([], Pecas, 2),
-    sort(Pecas, PecasOrdenadas),
-    menuVitoria(2, PecasOrdenadas).
+    pecasCapturadas([], Pieces, 2),
+    sort(Pieces, OrderedPieces),
+    game_over(2, OrderedPieces).
 
-menuGameOver(2) :-
+game_over(2) :-
     write('\nJOGADOR '),
     write(2),
     write(' SEM MOVIMENTOS POSSIVEIS\n'),
-    pecasCapturadas([], Pecas, 2),
-    sort(Pecas, PecasOrdenadas),
-    menuVitoria(1, PecasOrdenadas).
+    pecasCapturadas([], Pieces, 2),
+    sort(Pieces, OrderedPieces),
+    game_over(1, OrderedPieces).
 
     
 

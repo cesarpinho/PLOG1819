@@ -1,28 +1,58 @@
 :- use_module(library(lists)).
-:- dynamic captura/1.
+:- dynamic catch/1.
 
-play(Board, J) :-
-    tamanhoTabuleiro(Board, Linhas, Colunas),
-    imprimeJogo(Board, J, Linhas, Colunas),
+play(Board, J, _, _) :-
+    is_game_over(GameOver), GameOver == true,
+    abolish(is_game_over/1).
+
+play(Board, J, human, Type) :-
+    is_game_over(GameOver), GameOver == false,
+    board_size(Board, Linhas, Colunas),
+    display_game(Board, J, Linhas, Colunas), repeat,
     escolhePeca(J, Board, Peca),
     possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas),
     verificaQuantJogadas(J, Board, Peca, Jogadas),
-    escolheJogada(J, Board, Linhas, Jogadas, Jogada),
-    efetuarJogada(J, Board, Peca, Colunas, Jogada).
+    escolheJogada(J, Board, human, Type, Linhas, Jogadas, Jogada),
+    efetuarJogada(J, Board, Peca, Colunas, Jogada, NovoBoard),
+    change_player(J, NovoJ),
+    play(NovoBoard, NovoJ, Type, human).
 
+play(Board, J, computer1, Type) :- 
+    is_game_over(GameOver), GameOver == false,
+    board_size(Board, Linhas, Colunas),
+    display_game(Board, J, Linhas, Colunas),
+    valid_moves(Board, J, Linhas, Colunas, ListOfMoves),
+    choose_move(Board, J, computer1, ListOfMoves, Move),
+    move(J, Board, Linhas, Colunas, Move, NovoBoard),
+    wait_enter,
+    change_player(J, NewJ),
+    play(NovoBoard, NewJ, Type, computer1).
+
+play(Board, J, computer2, Type) :-
+    is_game_over(GameOver), GameOver == false,
+    board_size(Board, Linhas, Colunas),
+    display_game(Board, J, Linhas, Colunas),
+    valid_moves(Board, J, Linhas, Colunas, ListOfMoves),
+    choose_move(Board, J, computer2, ListOfMoves, Move),
+    move(J, Board, Linhas, Colunas, Move, NovoBoard),
+    wait_enter,
+    change_player(J, NewJ),
+    play(NovoBoard, NewJ, Type, computer2).
 
 escolhePeca(J, Board, Peca) :-
     write('Escolha o numero da peca que pretende mover : '),
-    getCode(Escolha),   
-    existePeca(J,Board, Escolha), !,
-    Peca = Escolha.
+    getCode(Choice),
+    new_line(1),
+    existePeca(J,Board, Choice), 
+    Peca = Choice.
 escolhePeca(J, Board, _) :-
-    write('Erro: Peca nao existente.\n'),
-    play(Board,J).
+    write('Erro: Peca nao existente.'),
+    new_line(2),
+    !,fail.
 
-existePeca(J, Board, Escolha) :-
+existePeca(J, Board, Choice) :-
     append(Board, List),
-    member(J-Escolha, List).
+    member(J-Choice, List).
 
 possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas) :-
     posicaoPeca(Board, J-Peca, Lin, Col, Colunas),
@@ -55,11 +85,11 @@ possiveisJogadasSemVizinhas(J, Board, Lin, Col, Linhas, Colunas, NumV, Jogadas) 
 
 possiveisJogadasSemVizinhas(_, _, _, _, _, _, _, []). 
 
-filtraJogadas(Board, Linhas, Colunas, [L-C-J|Jogadas], [X|List]) :- 
-    contaVizinhas(Board, L, C, Linhas, Colunas, NumV),
+filtraJogadas(Board, Linhas, Colunas, [L-C-NewL-NewC-J|Jogadas], [X|List]) :- 
+    contaVizinhas(Board, NewL, NewC, Linhas, Colunas, NumV),
     NumV >= 2,
     J =:= 0,
-    X = L-C-J,
+    X = L-C-NewL-NewC-J,
     filtraJogadas(Board, Linhas, Colunas, Jogadas, List).
 
 filtraJogadas(Board, Linhas, Colunas, [_|Jogadas], List) :- 
@@ -80,92 +110,105 @@ verificaQuantJogadas(J, Board, Peca, []) :-
     !, fail.
 verificaQuantJogadas(_, _, _, L) :- tail(L, _).
 
-verificaOutrasPecas(J, _, 13) :- !, menuGameOver(J, 'Sem Movimentos'). 
+verificaOutrasPecas(J, _, 13) :- !, game_over(J). 
 verificaOutrasPecas(J, Board, Peca):-
     existePeca(J, Board, Peca),
-    tamanhoTabuleiro(Board, Linhas, Colunas),
+    board_size(Board, Linhas, Colunas),
     possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas),
     verificaQuantJogadas(J, Board, Peca, Jogadas).
 
-escolheJogada(J, Board, Linhas, Jogadas, Jogada) :-
+escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
     write(' Jogadas possiveis :\n'),
     imprimeJogada(Linhas, Jogadas, 1, TotalJog),
-    novaLinha(1),
-    espaco(2),
+    new_line(1),
+    space(2),
     write('0 -> Voltar\n'),
     write('Escolha : '),
-    getCode(Escolha),
-    (Escolha =:= 0 -> play(Board,J) ; true),
-    Escolha > 0,
-    Escolha < TotalJog, 
-    nth1(Escolha, Jogadas, Jogada), !.
-    
-escolheJogada(J, Board, Linhas, Jogadas, Jogada) :-
+    peek_code(Code),
+    Code =\= 48,
+    getCode(Choice),
+    Choice > 0,
+    Choice < TotalJog, 
+    nth1(Choice, Jogadas, Jogada), !.
+
+escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
+    getCode(Code),
+    Code =:= 48, !,
+    play(Board, J, Type1, Type2).
+
+escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
     write('Erro: Escolha invalida.\n\n'),
-    escolheJogada(J, Board, Linhas, Jogadas, Jogada).
+    escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada).
 
 imprimeJogada(_, [], Indice, Indice).
-imprimeJogada(QuantLin, [L-C-J|Jogadas], Indice, TotalJog) :-
-    Lin is QuantLin - L,
-    Col is C + 65,    
-    espaco(2),
+imprimeJogada(QuantLin, [_-_-NewL-NewC-J|Jogadas], Indice, TotalJog) :-
+    Lin is QuantLin - NewL,
+    Col is NewC + 65,
+    space(2),
     write(Indice),
     write(' -> '),
     put_code(Col),
     write(Lin),
     (J =\= 0 -> write(' *Captura* ') ; true),
-    novaLinha(1),
+    new_line(1),
     NextI is Indice + 1,
     imprimeJogada(QuantLin, Jogadas, NextI, TotalJog).
     
-efetuarJogada(Jog, Board, Peca, Colunas, L-C-J) :- 
-    posicaoPeca(Board, Jog-Peca, LinP, ColP, Colunas),
-    replace(Board, Jog-Peca, L, C, Board1),
-    casaVazia(V),
-    replace(Board1, V, LinP, ColP, NovoBoard),
-    isCaptura(Jog, Board, Colunas, L-C-J),
-    trocaJogador(Jog, NovoJ),
-    play(NovoBoard, NovoJ).
+efetuarJogada(Jog, Board, Peca, Colunas, L-C-NewL-NewC-J, NovoBoard) :- 
+    replace(Board, Jog-Peca, NewL, NewC, Board1),
+    empty_cel(V),
+    replace(Board1, V, L, C, NovoBoard),
+    is_catch(Jog, Board, Colunas, L-C-NewL-NewC-J).
 
-isCaptura(_, _, _, _-_-0).
-isCaptura(Jog, Board, Colunas, L-C-J) :-
-    posicaoPeca(Board, J-Peca, L, C, Colunas),    
+is_catch(_, _, _, _-_-_-_-0).
+is_catch(Jog, Board, Colunas, L-C-NewL-NewC-J) :-
+    J =\= 0, J =\= Jog,
+    posicaoPeca(Board, J-Peca, NewL, NewC, Colunas),    
     write(' * Peca '),
     write(Peca),
     write(' capturada *\n'),
-    asserta(captura(Jog-Peca)),
-    verificaVitoria(Jog).
+    asserta(catch(Jog-Peca)),
+    check_vitory(Jog).
 
-verificaVitoria(Jog) :-
-    pecasCapturadas([], Pecas, Jog),
+check_vitory(Jog) :-
+    pecasCapturadas(Jog, Pecas),
     sort(Pecas, PecasOrdenadas),
-    verificaSequencia(PecasOrdenadas), !,
-    menuVitoria(Jog, PecasOrdenadas).
-verificaVitoria(_).
+    check_sequence(PecasOrdenadas, _, Value),
+    Value >= 5,
+    game_over(Jog, PecasOrdenadas).
 
-verificaSequencia(Pecas) :-
-    verificaSequencia(Pecas, 0, _).
+check_vitory(_).
 
-verificaSequencia(_, 5, _).
-verificaSequencia([], _, _) :- fail.
-verificaSequencia([X|Pecas], 0, UltimaP) :-
-    UltimaP = X, !,
-    verificaSequencia(Pecas, 1, UltimaP).
+check_sequence([X|Pecas], FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    check_sequence([X|Pecas], 1, X-X, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
 
-verificaSequencia([X|Pecas], Quant, UltimaP) :-
-    NextPeca is UltimaP + 1,
+check_sequence([], _, _, 0-0, 0).
+check_sequence([X|Pecas], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    NextPeca is LastP + 1,
     NextPeca =:= X, 
-    NextQ is Quant + 1, !,
-    verificaSequencia(Pecas, NextQ, NextPeca).
+    NextQ is Quant + 1,
+    check_sequence(Pecas, NextQ, FirstP-X, FirstSeqPiece-LastSeqPiece, Seq),
+    save_sequence(NextQ, FirstP-X, FirstSeqPiece-LastSeqPiece, Seq, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
 
-verificaSequencia([X|Pecas], _, UltimaP) :-
-    NextPeca is UltimaP + 1,
+check_sequence([X|Pecas], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    NextPeca is LastP + 1,
     NextPeca =\= X,
-    NextQ is 1, !,
-    verificaSequencia(Pecas, NextQ, X).    
+    NextQ is 1,
+    check_sequence(Pecas, NextQ, X-X, FirstSeqPiece-LastSeqPiece, Seq),
+    save_sequence(NextQ, X-X, FirstSeqPiece-LastSeqPiece, Seq, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
+
+save_sequence(Quant, FirstP-LastP, OldFirstPiece-OldLastPiece, SeqOrder, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    Quant > SeqOrder,
+    GreaterSeq = Quant,
+    FirstGreatSeqPiece = FirstP,
+    LastGreatSeqPiece = LastP.
+save_sequence(_, _, OldFirstPiece-OldLastPiece, SeqOrder, OldFirstPiece-OldLastPiece, SeqOrder).
+
+pecasCapturadas(Jog, PecasCapturadas) :-
+    pecasCapturadas([], PecasCapturadas, Jog).
 
 pecasCapturadas(L1,L,J) :- 
-    captura(J-X),
+    catch(J-X),
     not(member(X, L1)),
     append(L1,[X],List),
     pecasCapturadas(List,L,J). 
@@ -179,7 +222,7 @@ posicaoPeca(Board, JePeca, L, C, Col) :-
     append(Board, BoardList),
     nth0(Num, BoardList, JePeca),
     L is div(Num, Col),
-    C is mod(Num, Col).
+    C is mod(Num, Col),!.
 
 %        C1  C2  C3  %
 %  L1    1   2   3   %
@@ -356,7 +399,9 @@ posicaoOcupada(Board, L, C, Colunas, Ocupada) :-
     append(Board, BoardList),
     Num is (L * Colunas) + C,
     nth0(Num, BoardList, Peca),
-    (casaVazia(Peca) -> Ocupada is 0; Ocupada is 1).
+    empty_cel(Peca),
+    Ocupada is 0.
+posicaoOcupada(_, _, _, _, 1).
 
 %%%---------------------------------------------------%%%
 %%%     Calcula os movimentos possiveis de uma peca   %%% 
@@ -364,48 +409,56 @@ posicaoOcupada(Board, L, C, Colunas, Ocupada) :-
 %%%     Movimento Horizontal     %%%
 movimentoHorizontal(J, Board, LinP, ColP, Colunas, NumV, MovH) :-
     nth0(LinP, Board, Linha),
-    (movimentoDireita(J, LinP, ColP, Linha, Colunas, NumV, MovHD) -> true ; MovHD = []),
-    (movimentoEsquerda(J, LinP, ColP, Linha, NumV, MovHE) -> true ; MovHE = []),
+    movimentoDireita(J, LinP, ColP, Linha, Colunas, NumV, MovHD),
+    movimentoEsquerda(J, LinP, ColP, Linha, NumV, MovHE),
     append(MovHE,MovHD, MovH).
 
 movimentoDireita(J, LinP, ColP, Linha, Colunas, NumV, MovHD) :-
     NovaCol is ColP + NumV,
     NovaCol < Colunas,
     nth0(NovaCol, Linha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovHD = [LinP-NovaCol-NovoJ] ; MovHD = []).
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovHD = [LinP-ColP-LinP-NovaCol-NovoJ].
+movimentoDireita(_, _, _, _, _, _, []).
 
 movimentoEsquerda(J, LinP, ColP, Linha, NumV, MovHE) :-
     NovaCol is ColP - NumV,
     NovaCol >= 0,
     nth0(NovaCol, Linha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovHE = [LinP-NovaCol-NovoJ] ; MovHE = []).
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovHE = [LinP-ColP-LinP-NovaCol-NovoJ].
+movimentoEsquerda(_, _, _, _, _, []).
 
 %%%       Movimento Vertical       %%%
 movimentoVertical(J, Board, LinP, ColP, Linhas, NumV, MovV) :-
-    (movimentoCima(J, Board, LinP, ColP, NumV, MovC) -> true ; MovC = [] ),
-    (movimentoBaixo(J, Board, LinP, ColP, Linhas, NumV, MovB) -> true ; MovB = [] ),
+    movimentoCima(J, Board, LinP, ColP, NumV, MovC),
+    movimentoBaixo(J, Board, LinP, ColP, Linhas, NumV, MovB),
     append(MovC, MovB, MovV).
 
 movimentoCima(J, Board, LinP, ColP, NumV, MovC) :-
     NovaL is LinP - NumV,
     NovaL >= 0,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(ColP, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovC = [NovaL-ColP-NovoJ] ; MovC = []).
+    nth0(NovaL, Board, new_line),
+    nth0(ColP, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovC = [LinP-ColP-NovaL-ColP-NovoJ].
+movimentoCima(_, _, _, _, _, []).
 
 movimentoBaixo(J, Board, LinP, ColP, Linhas, NumV, MovB) :-
     NovaL is LinP + NumV,
     NovaL < Linhas,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(ColP, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovB = [NovaL-ColP-NovoJ] ; MovB = []).
+    nth0(NovaL, Board, new_line),
+    nth0(ColP, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovB = [LinP-ColP-NovaL-ColP-NovoJ].
+movimentoBaixo(_, _, _, _, _, _, []).
 
 %%%       Movimento Diagonal       %%%
 movimentoDiagonal(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovD) :- 
-    (movimentoCimaEsquerda(J, Board, LinP, ColP, NumV, MovCE) -> true ; MovCE = []),
-    (movimentoCimaDireita(J, Board, LinP, ColP, Colunas, NumV, MovCD) -> true ; MovCD = []),
-    (movimentoBaixoEsquerda(J, Board, LinP, ColP, Linhas, NumV, MovBE) -> true ; MovBE = []),
-    (movimentoBaixoDireita(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovBD) -> true ; MovBD = []),
+    movimentoCimaEsquerda(J, Board, LinP, ColP, NumV, MovCE),
+    movimentoCimaDireita(J, Board, LinP, ColP, Colunas, NumV, MovCD),
+    movimentoBaixoEsquerda(J, Board, LinP, ColP, Linhas, NumV, MovBE),
+    movimentoBaixoDireita(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovBD),
     append(MovCE, MovCD, Mov1),
     append(Mov1, MovBE, Mov2),
     append(Mov2, MovBD, MovD).
@@ -415,33 +468,41 @@ movimentoCimaEsquerda(J, Board, LinP, ColP, NumV, MovCE) :-
     NovaL >= 0,
     NovaC is ColP - NumV,
     NovaC >= 0,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(NovaC, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovCE = [NovaL-NovaC-NovoJ] ; MovCE = []).
+    nth0(NovaL, Board, new_line),
+    nth0(NovaC, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovCE = [LinP-ColP-NovaL-NovaC-NovoJ].
+movimentoCimaEsquerda(_, _, _, _, _, []).
 
 movimentoCimaDireita(J, Board, LinP, ColP, Colunas, NumV, MovCD) :- 
     NovaL is LinP - NumV,
     NovaL >= 0,
     NovaC is ColP + NumV,
     NovaC < Colunas,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(NovaC, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovCD = [NovaL-NovaC-NovoJ] ; MovCD = []).
+    nth0(NovaL, Board, new_line),
+    nth0(NovaC, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovCD = [LinP-ColP-NovaL-NovaC-NovoJ].
+movimentoCimaDireita(_, _, _, _, _, _, []).
 
 movimentoBaixoEsquerda(J, Board, LinP, ColP, Linhas, NumV, MovBE) :-
     NovaL is LinP + NumV,
     NovaL < Linhas,
     NovaC is ColP - NumV,
     NovaC >= 0,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(NovaC, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovBE = [NovaL-NovaC-NovoJ] ; MovBE = []).
+    nth0(NovaL, Board, new_line),
+    nth0(NovaC, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovBE = [LinP-ColP-NovaL-NovaC-NovoJ].
+movimentoBaixoEsquerda(_, _, _, _, _, _, []).
 
 movimentoBaixoDireita(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovBD) :-
     NovaL is LinP + NumV,
     NovaL < Linhas,
     NovaC is ColP + NumV,
     NovaC < Colunas,
-    nth0(NovaL, Board, NovaLinha),
-    nth0(NovaC, NovaLinha, NovoJ-NovaPeca),
-    ((casaVazia(NovoJ-NovaPeca) ; NovoJ =\= J) -> MovBD = [NovaL-NovaC-NovoJ] ; MovBD = []).
+    nth0(NovaL, Board, new_line),
+    nth0(NovaC, new_line, NovoJ-NovaPeca),
+    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
+    MovBD = [LinP-ColP-NovaL-NovaC-NovoJ].
+movimentoBaixoDireita(_, _, _, _, _, _, _, []).
