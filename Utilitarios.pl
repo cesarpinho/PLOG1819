@@ -1,5 +1,3 @@
-:- use_module(library(between)).
-
 empty_cel(0-0).
 
 clr :- write('\33\[2J').
@@ -7,8 +5,7 @@ clr :- write('\33\[2J').
 wait_enter :-
     write('Press any key to continue...'),
     new_line(2),
-    get_char(_)/* ,
-    clr */.
+    get_char(_).
 
 change_player(1, 2).
 change_player(2, 1).
@@ -16,13 +13,14 @@ change_player(2, 1).
 isEmpty([]).
 isEmpty([_|_]) :- !, fail.
 
+/* Conta os elementos de uma lista */
 count_lines([_|L], NumL) :-  
     count_lines(L,N), 
     NumL is N + 1.
-
 count_lines([],0).
 
-board_size([H | T], Col, Lin) :-
+/* Calcula e retorna o tamanho do tabuleiro (Linhas e Colunas) */
+board_size([H | T], Lin, Col) :-
     count_lines(H, Col),
     count_lines(T, X),
     Lin is X + 1.
@@ -44,6 +42,7 @@ new_line(N) :-
 not(X) :- X ,! ,fail.
 not(_).
 
+/* Substitui um o elemento da posicao (Lin,Col) por Elem */
 replace([X|L], Elem, 0, Col, [Y|L]) :-
     replace(X, Elem, Col, Y).
 replace([X|L], Elem, Lin, Col, [X|NewL]) :-
@@ -58,10 +57,9 @@ replace([X|L], Elem, Col, [X|N]) :-
     Col1 is Col - 1,
     replace(L, Elem, Col1, N).
 
-
+/* Le inputs da consola e retorna se for um numero válido */
 :- dynamic choice/1.
-
-getCode(Choice) :- 
+get_number(Choice) :- 
     asserta((choice(10):-!)),    
     get_code(Code1),
     between(48, 57, Code1),
@@ -74,13 +72,13 @@ getCode(Choice) :-
     skip_line, !,
     abolish(choice/1).
 
-getCode(Choice) :-
+get_number(Choice) :-
     choice(Choice),
     Choice == 10, 
     abolish(choice/1),
     !, fail.
 
-getCode(Choice) :-
+get_number(Choice) :-
     choice(Choice),
     skip_line,
     abolish(choice/1).

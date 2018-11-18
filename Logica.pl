@@ -1,235 +1,237 @@
-:- use_module(library(lists)).
-:- dynamic catch/1.
-
-play(Board, J, _, _) :-
+/* Predicado principal de Jogo */
+play(_, _, _, _) :-
     is_game_over(GameOver), GameOver == true,
     abolish(is_game_over/1).
 
-play(Board, J, human, Type) :-
+play(Board, Player, human, Type) :-
     is_game_over(GameOver), GameOver == false,
-    board_size(Board, Linhas, Colunas),
-    display_game(Board, J, Linhas, Colunas), repeat,
-    escolhePeca(J, Board, Peca),
-    possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas),
-    verificaQuantJogadas(J, Board, Peca, Jogadas),
-    escolheJogada(J, Board, human, Type, Linhas, Jogadas, Jogada),
-    efetuarJogada(J, Board, Peca, Colunas, Jogada, NovoBoard),
-    change_player(J, NovoJ),
-    play(NovoBoard, NovoJ, Type, human).
+    board_size(Board, Lines, Columns),
+    display_game(Board, Player, Lines, Columns), repeat,
+    choose_piece(Player, Board, Piece),
+    possible_plays(Player, Board, Piece, Lines, Columns, Plays),
+    check_quant_plays(Player, Board, Piece, Plays),
+    choose_move(Player, Board, human, Type, Lines, Plays, Move),
+    make_move(Player, Board, Piece, Columns, Move, NewBoard),
+    change_player(Player, NewPlayer),
+    play(NewBoard, NewPlayer, Type, human).
 
-play(Board, J, computer1, Type) :- 
+play(Board, Player, computer1, Type) :- 
     is_game_over(GameOver), GameOver == false,
-    board_size(Board, Linhas, Colunas),
-    display_game(Board, J, Linhas, Colunas),
-    valid_moves(Board, J, Linhas, Colunas, ListOfMoves),
-    choose_move(Board, J, computer1, ListOfMoves, Move),
-    move(J, Board, Linhas, Colunas, Move, NovoBoard),
+    board_size(Board, Lines, Columns),
+    display_game(Board, Player, Lines, Columns),
+    valid_moves(Board, Player, Lines, Columns, ListOfMoves),
+    choose_move(Board, Player, computer1, ListOfMoves, Move),
+    move(Player, Board, Lines, Columns, Move, NewBoard),
     wait_enter,
-    change_player(J, NewJ),
-    play(NovoBoard, NewJ, Type, computer1).
+    change_player(Player, NewJ),
+    play(NewBoard, NewJ, Type, computer1).
 
-play(Board, J, computer2, Type) :-
+play(Board, Player, computer2, Type) :-
     is_game_over(GameOver), GameOver == false,
-    board_size(Board, Linhas, Colunas),
-    display_game(Board, J, Linhas, Colunas),
-    valid_moves(Board, J, Linhas, Colunas, ListOfMoves),
-    choose_move(Board, J, computer2, ListOfMoves, Move),
-    move(J, Board, Linhas, Colunas, Move, NovoBoard),
+    board_size(Board, Lines, Columns),
+    display_game(Board, Player, Lines, Columns),
+    valid_moves(Board, Player, Lines, Columns, ListOfMoves),
+    choose_move(Board, Player, computer2, ListOfMoves, Move),
+    move(Player, Board, Lines, Columns, Move, NewBoard),
     wait_enter,
-    change_player(J, NewJ),
-    play(NovoBoard, NewJ, Type, computer2).
+    change_player(Player, NewJ),
+    play(NewBoard, NewJ, Type, computer2).
 
-escolhePeca(J, Board, Peca) :-
+/* Pede uma peca ao jogador, verifica se existe no tabuleiro e retorna-a*/
+choose_piece(Player, Board, Piece) :-
     write('Escolha o numero da peca que pretende mover : '),
-    getCode(Choice),
+    get_number(Choice),
     new_line(1),
-    existePeca(J,Board, Choice), 
-    Peca = Choice.
-escolhePeca(J, Board, _) :-
+    exist_piece(Player,Board, Choice), 
+    Piece = Choice.
+choose_piece(_, _, _) :-
     write('Erro: Peca nao existente.'),
     new_line(2),
     !,fail.
 
-existePeca(J, Board, Choice) :-
+/* Verifica se a Piece existe no tabuleiro */
+exist_piece(Player, Board, Piece) :-
     append(Board, List),
-    member(J-Choice, List).
+    member(Player-Piece, List).
 
-possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas) :-
-    posicaoPeca(Board, J-Peca, Lin, Col, Colunas),
-    contaVizinhas(Board, Lin, Col, Linhas, Colunas, NumV),
-    NumV =\= 0, !,
-    movimentoHorizontal(J, Board, Lin, Col, Colunas, NumV, MovH),
-    movimentoVertical(J, Board, Lin, Col, Linhas, NumV, MovV),
-    movimentoDiagonal(J, Board, Lin, Col, Linhas, Colunas, NumV, MovD),
+/* Calcula as jogadas possiveis para a Piece */
+possible_plays(Player, Board, Piece, Lines, Columns, Plays) :-
+    piece_position(Board, Player-Piece, Lin, Col, Columns),
+    adjacent_pieces(Board, Lin, Col, Lines, Columns, NumAdj),
+    NumAdj =\= 0, !,
+    move_horizontal(Player, Board, Lin, Col, Columns, NumAdj, MovH),
+    move_vertical(Player, Board, Lin, Col, Lines, NumAdj, MovV),
+    move_diagonal(Player, Board, Lin, Col, Lines, Columns, NumAdj, MovD),
     append(MovH, MovV, MovHV),
-    append(MovHV, MovD, Jogadas).
+    append(MovHV, MovD, Plays).
 
-possiveisJogadas(J, Board, Peca, Linhas, Colunas, JogadasValidas) :-
-    posicaoPeca(Board, J-Peca, Lin, Col, Colunas),
-    possiveisJogadasSemVizinhas(J, Board, Lin, Col, Linhas, Colunas, 1, Jogadas),
+possible_plays(Player, Board, Piece, Lines, Columns, ValidPlays) :-
+    piece_position(Board, Player-Piece, Lin, Col, Columns),
+    possible_plays_without_adjacents(Player, Board, Lin, Col, Lines, Columns, 1, Plays),
     replace(Board, 0-0, Lin, Col, Board1),
-    filtraJogadas(Board1, Linhas, Colunas, Jogadas, JogadasValidas).
+    filter_plays(Board1, Lines, Columns, Plays, ValidPlays).
 
-
-possiveisJogadasSemVizinhas(J, Board, Lin, Col, Linhas, Colunas, NumV, Jogadas) :-
-    NumV < Linhas, 
-    NumV < Colunas,
-    movimentoHorizontal(J, Board, Lin, Col, Colunas, NumV, MovH),
-    movimentoVertical(J, Board, Lin, Col, Linhas, NumV, MovV),
-    movimentoDiagonal(J, Board, Lin, Col, Linhas, Colunas, NumV, MovD),
-    NovoNumV is NumV + 1,
-    possiveisJogadasSemVizinhas(J, Board, Lin, Col, Linhas, Colunas, NovoNumV, Jogadas1),
+/* Calcula as jogadas possiveis para uma peca da posicao (Lin,Col) quando esta nao tem pecas adjacentes */
+possible_plays_without_adjacents(Player, Board, Lin, Col, Lines, Columns, NumAdj, Plays) :-
+    NumAdj < Lines, 
+    NumAdj < Columns,
+    move_horizontal(Player, Board, Lin, Col, Columns, NumAdj, MovH),
+    move_vertical(Player, Board, Lin, Col, Lines, NumAdj, MovV),
+    move_diagonal(Player, Board, Lin, Col, Lines, Columns, NumAdj, MovD),
+    NewNumAdj is NumAdj + 1,
+    possible_plays_without_adjacents(Player, Board, Lin, Col, Lines, Columns, NewNumAdj, Plays2),
     append(MovH, MovV, MovHV),
-    append(MovHV, MovD, NJogadas),
-    append(NJogadas, Jogadas1, Jogadas).
+    append(MovHV, MovD, Plays1),
+    append(Plays1, Plays2, Plays).
 
-possiveisJogadasSemVizinhas(_, _, _, _, _, _, _, []). 
+possible_plays_without_adjacents(_, _, _, _, _, _, _, []). 
 
-filtraJogadas(Board, Linhas, Colunas, [L-C-NewL-NewC-J|Jogadas], [X|List]) :- 
-    contaVizinhas(Board, NewL, NewC, Linhas, Colunas, NumV),
-    NumV >= 2,
-    J =:= 0,
-    X = L-C-NewL-NewC-J,
-    filtraJogadas(Board, Linhas, Colunas, Jogadas, List).
+/* Retorna apenas as jogadas que resultam com pelo menos 2 pecas adjacentes.
+Isto é aplicado quando uma peca nao tem pecas adjacentes */
+filter_plays(Board, Lines, Columns, [L-C-NewL-NewC-Play|Plays], [X|List]) :- 
+    Play =:= 0,
+    adjacent_pieces(Board, NewL, NewC, Lines, Columns, NumAdj),
+    NumAdj >= 2,
+    X = L-C-NewL-NewC-Play,
+    filter_plays(Board, Lines, Columns, Plays, List).
 
-filtraJogadas(Board, Linhas, Colunas, [_|Jogadas], List) :- 
-    filtraJogadas(Board, Linhas, Colunas, Jogadas, List).
+filter_plays(Board, Lines, Columns, [_|Plays], List) :- 
+    filter_plays(Board, Lines, Columns, Plays, List).
 
-filtraJogadas(_, _, _, [], []).
+filter_plays(_, _, _, [], []).
 
+/* Verifica se a lista tem jogadas, caso contrario
+verifica se outras pecas ainda têm movimentos possiveis */
+check_quant_plays(Player, Board, []) :-
+    Piece = 1,
+    check_other_pieces(Player, Board, Piece).
+check_quant_plays(_, _, _).
 
-verificaQuantJogadas(J, Board, []) :-
-    Peca = 1,
-    verificaOutrasPecas(J, Board, Peca).
-verificaQuantJogadas(_, _, _).
-
-verificaQuantJogadas(J, Board, Peca, []) :-
-    P is Peca + 1,
-    verificaOutrasPecas(J, Board, P),
+check_quant_plays(Player, Board, Piece, []) :-
+    P is Piece + 1,
+    check_other_pieces(Player, Board, P),
     write('A peca escolhida nao tem movimentos possiveis. \n'),
     !, fail.
-verificaQuantJogadas(_, _, _, L) :- tail(L, _).
+check_quant_plays(_, _, _, L) :- tail(L, _).
 
-verificaOutrasPecas(J, _, 13) :- !, game_over(J). 
-verificaOutrasPecas(J, Board, Peca):-
-    existePeca(J, Board, Peca),
-    board_size(Board, Linhas, Colunas),
-    possiveisJogadas(J, Board, Peca, Linhas, Colunas, Jogadas),
-    verificaQuantJogadas(J, Board, Peca, Jogadas).
+/* Se nao exitir jogadas possiveis para nenhuma peca, é game over */
+check_other_pieces(Player, _, 13) :- !, game_over(Player). 
+check_other_pieces(Player, Board, Piece):-
+    exist_piece(Player, Board, Piece),
+    board_size(Board, Lines, Columns),
+    possible_plays(Player, Board, Piece, Lines, Columns, Plays),
+    check_quant_plays(Player, Board, Piece, Plays).
 
-escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
+/* Apresenta os movimentos possiveis e pede ao jogador para escolher um */
+choose_move(_, _, _, _, Lines, Plays, Move) :-
     write(' Jogadas possiveis :\n'),
-    imprimeJogada(Linhas, Jogadas, 1, TotalJog),
+    display_plays(Lines, Plays, 1, TotalJog),
     new_line(1),
     space(2),
     write('0 -> Voltar\n'),
     write('Escolha : '),
     peek_code(Code),
     Code =\= 48,
-    getCode(Choice),
+    get_number(Choice),
     Choice > 0,
     Choice < TotalJog, 
-    nth1(Choice, Jogadas, Jogada), !.
+    nth1(Choice, Plays, Move), !.
 
-escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
-    getCode(Code),
+choose_move(Player, Board, Type1, Type2, _, _, _) :-
+    get_number(Code),
     Code =:= 48, !,
-    play(Board, J, Type1, Type2).
+    play(Board, Player, Type1, Type2).
 
-escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada) :-
+choose_move(Player, Board, Type1, Type2, Lines, Plays, Move) :-
     write('Erro: Escolha invalida.\n\n'),
-    escolheJogada(J, Board, Type1, Type2, Linhas, Jogadas, Jogada).
+    choose_move(Player, Board, Type1, Type2, Lines, Plays, Move).
 
-imprimeJogada(_, [], Indice, Indice).
-imprimeJogada(QuantLin, [_-_-NewL-NewC-J|Jogadas], Indice, TotalJog) :-
-    Lin is QuantLin - NewL,
-    Col is NewC + 65,
-    space(2),
-    write(Indice),
-    write(' -> '),
-    put_code(Col),
-    write(Lin),
-    (J =\= 0 -> write(' *Captura* ') ; true),
-    new_line(1),
-    NextI is Indice + 1,
-    imprimeJogada(QuantLin, Jogadas, NextI, TotalJog).
-    
-efetuarJogada(Jog, Board, Peca, Colunas, L-C-NewL-NewC-J, NovoBoard) :- 
-    replace(Board, Jog-Peca, NewL, NewC, Board1),
+/* Move a peca no tabuleiro e verifica se foi capturada alguma peca */
+make_move(Player, Board, Piece, Columns, L-C-NewL-NewC-Play, NewBoard) :- 
+    replace(Board, Player-Piece, NewL, NewC, Board1),
     empty_cel(V),
-    replace(Board1, V, L, C, NovoBoard),
-    is_catch(Jog, Board, Colunas, L-C-NewL-NewC-J).
+    replace(Board1, V, L, C, NewBoard),
+    is_catch(Player, Board, Columns, L-C-NewL-NewC-Play).
 
+/* Verifica se foi capturada alguma peca, adiciona-a á base de dados e verifica se foi vitoria */
 is_catch(_, _, _, _-_-_-_-0).
-is_catch(Jog, Board, Colunas, L-C-NewL-NewC-J) :-
-    J =\= 0, J =\= Jog,
-    posicaoPeca(Board, J-Peca, NewL, NewC, Colunas),    
+is_catch(Player, Board, Columns, _-_-NewL-NewC-Play) :-
+    Play =\= 0, Play =\= Player,
+    piece_position(Board, Play-Piece, NewL, NewC, Columns),    
     write(' * Peca '),
-    write(Peca),
+    write(Piece),
     write(' capturada *\n'),
-    asserta(catch(Jog-Peca)),
-    check_vitory(Jog).
+    asserta(catch(Player-Piece)),
+    check_vitory(Player).
 
-check_vitory(Jog) :-
-    pecasCapturadas(Jog, Pecas),
-    sort(Pecas, PecasOrdenadas),
-    check_sequence(PecasOrdenadas, _, Value),
+/* Verifica se é vitoria do jogador */
+check_vitory(Player) :-
+    catched_pieces(Player, Pieces),
+    sort(Pieces, OrderedPieces),
+    check_sequence(OrderedPieces, _, Value),
     Value >= 5,
-    game_over(Jog, PecasOrdenadas).
+    game_over(Player, OrderedPieces).
 
 check_vitory(_).
 
-check_sequence([X|Pecas], FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
-    check_sequence([X|Pecas], 1, X-X, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
+/* Verifica se existe alguma sequencia de numeros, e retorna a maior sequencia existente */
+check_sequence([X|Pieces], FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    check_sequence([X|Pieces], 1, X-X, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
 
 check_sequence([], _, _, 0-0, 0).
-check_sequence([X|Pecas], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
-    NextPeca is LastP + 1,
-    NextPeca =:= X, 
+check_sequence([X|Pieces], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    NextPiece is LastP + 1,
+    NextPiece =:= X, 
     NextQ is Quant + 1,
-    check_sequence(Pecas, NextQ, FirstP-X, FirstSeqPiece-LastSeqPiece, Seq),
+    check_sequence(Pieces, NextQ, FirstP-X, FirstSeqPiece-LastSeqPiece, Seq),
     save_sequence(NextQ, FirstP-X, FirstSeqPiece-LastSeqPiece, Seq, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
 
-check_sequence([X|Pecas], Quant, FirstP-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
-    NextPeca is LastP + 1,
-    NextPeca =\= X,
+check_sequence([X|Pieces], _, _-LastP, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+    NextPiece is LastP + 1,
+    NextPiece =\= X,
     NextQ is 1,
-    check_sequence(Pecas, NextQ, X-X, FirstSeqPiece-LastSeqPiece, Seq),
+    check_sequence(Pieces, NextQ, X-X, FirstSeqPiece-LastSeqPiece, Seq),
     save_sequence(NextQ, X-X, FirstSeqPiece-LastSeqPiece, Seq, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq).
 
-save_sequence(Quant, FirstP-LastP, OldFirstPiece-OldLastPiece, SeqOrder, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
+save_sequence(Quant, FirstP-LastP, _, SeqOrder, FirstGreatSeqPiece-LastGreatSeqPiece, GreaterSeq) :-
     Quant > SeqOrder,
     GreaterSeq = Quant,
     FirstGreatSeqPiece = FirstP,
     LastGreatSeqPiece = LastP.
 save_sequence(_, _, OldFirstPiece-OldLastPiece, SeqOrder, OldFirstPiece-OldLastPiece, SeqOrder).
 
-pecasCapturadas(Jog, PecasCapturadas) :-
-    pecasCapturadas([], PecasCapturadas, Jog).
+/* Retorna todas as pecas capturadas pelo Player */
+catched_pieces(Player, CatchedPieces) :-
+    catched_pieces([], CatchedPieces, Player).
 
-pecasCapturadas(L1,L,J) :- 
-    catch(J-X),
+catched_pieces(L1,L,Player) :- 
+    catch(Player-X),
     not(member(X, L1)),
     append(L1,[X],List),
-    pecasCapturadas(List,L,J). 
+    catched_pieces(List,L,Player). 
 
-pecasCapturadas(L,L,_).
+catched_pieces(L,L,_).
 
 %%%-----------------------------------------------------%%%
 %%%   Calcula o numero de pecas adjacentes a uma peca   %%% 
 %%%-----------------------------------------------------%%%
-posicaoPeca(Board, JePeca, L, C, Col) :-
+/* Retorna a posicao de uma peca.
+Pode obter-se a peca numa posicao (L,C) ou a posicao (L,C) de uma peca */
+piece_position(Board, Play-Piece, L, C, Col) :-
     append(Board, BoardList),
-    nth0(Num, BoardList, JePeca),
+    nth0(Num, BoardList, Play-Piece),
     L is div(Num, Col),
     C is mod(Num, Col),!.
 
+/* Calcula o numero de pecas adjacentes a uma peca na posicao (L,C) 
+Nos comentarios de cada predicado, é mostrada a situação da peca qe é analisada.
+P representa a posicao da peca, e os numero em redor sao as casas do tabuleiro em redor da peca */
 %        C1  C2  C3  %
 %  L1    1   2   3   %
 %  L2    4   P   5   %
 %  L3    6   7   8   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L > 0, C > 0, L < Linhas-1, C < Colunas-1, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L > 0, C > 0, L < Lines-1, C < Columns-1, !, 
     L1 is L - 1, 
     L2 is L,
     L3 is L + 1,
@@ -237,272 +239,273 @@ contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
     C2 is C,
     C3 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
-    posicaoOcupada(Board,L1,C3,Colunas,N3),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
+    is_ocuppied_position(Board,L1,C3,Columns,N3),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N4),
-    posicaoOcupada(Board,L2,C3,Colunas,N5),
+    is_ocuppied_position(Board,L2,C1,Columns,N4),
+    is_ocuppied_position(Board,L2,C3,Columns,N5),
     %%  L3  %%
-    posicaoOcupada(Board,L3,C1,Colunas,N6),
-    posicaoOcupada(Board,L3,C2,Colunas,N7),
-    posicaoOcupada(Board,L3,C3,Colunas,N8),
-    NumV is N1 + N2 + N3 + N4 + N5 + N6 + N7 + N8.
+    is_ocuppied_position(Board,L3,C1,Columns,N6),
+    is_ocuppied_position(Board,L3,C2,Columns,N7),
+    is_ocuppied_position(Board,L3,C3,Columns,N8),
+    NumAdj is N1 + N2 + N3 + N4 + N5 + N6 + N7 + N8.
 
 %        C1  C2 %
 %  L1    P   1  %
 %  L2    2   3  %
-contaVizinhas(Board, L, C, _, Colunas, NumV) :-
+adjacent_pieces(Board, L, C, _, Columns, NumAdj) :-
     L =:= 0, C =:= 0, !, 
     L1 is L,
     L2 is L + 1,
     C1 is C,
     C2 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C2,Colunas,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N1),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N2),
-    posicaoOcupada(Board,L2,C2,Colunas,N3),
-    NumV is N1 + N2 + N3.
+    is_ocuppied_position(Board,L2,C1,Columns,N2),
+    is_ocuppied_position(Board,L2,C2,Columns,N3),
+    NumAdj is N1 + N2 + N3.
 
 %        C1  C2  %
 %  L1    1   P   %
 %  L2    2   3   %
-contaVizinhas(Board, L, C, _, Colunas, NumV) :-
-    L =:= 0 , C =:= Colunas-1, !, 
+adjacent_pieces(Board, L, C, _, Columns, NumAdj) :-
+    L =:= 0 , C =:= Columns-1, !, 
     L1 is L,
     L2 is L + 1,
     C1 is C - 1,
     C2 is C,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N2),
-    posicaoOcupada(Board,L2,C2,Colunas,N3),
-    NumV is N1 + N2 + N3.
+    is_ocuppied_position(Board,L2,C1,Columns,N2),
+    is_ocuppied_position(Board,L2,C2,Columns,N3),
+    NumAdj is N1 + N2 + N3.
 
 %        C1  C2  %
 %  L1    1   2   %
 %  L2    P   3   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L =:= Linhas-1 , C =:= 0, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L =:= Lines-1 , C =:= 0, !, 
     L1 is L - 1,
     L2 is L,
     C1 is C,
     C2 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C2,Colunas,N3),
-    NumV is N1 + N2 + N3.
+    is_ocuppied_position(Board,L2,C2,Columns,N3),
+    NumAdj is N1 + N2 + N3.
 
 %        C1  C2  %
 %  L1    1   2   %
 %  L2    3   P   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L =:= Linhas-1 , C =:= Colunas-1, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L =:= Lines-1 , C =:= Columns-1, !, 
     L1 is L - 1,
     L2 is L,
     C1 is C - 1,
     C2 is C,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N3),
-    NumV is N1 + N2 + N3.
+    is_ocuppied_position(Board,L2,C1,Columns,N3),
+    NumAdj is N1 + N2 + N3.
 
 %        C1  C2  C3  %
 %  L1    1   P   2   %
 %  L2    3   4   5   %
-contaVizinhas(Board, L, C, _, Colunas, NumV) :-
-    L =:= 0, C > 0, C < Colunas-1, !, 
+adjacent_pieces(Board, L, C, _, Columns, NumAdj) :-
+    L =:= 0, C > 0, C < Columns-1, !, 
     L1 is L, 
     L2 is L + 1,
     C1 is C - 1,
     C2 is C,
     C3 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C3,Colunas,N2),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C3,Columns,N2),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N3),
-    posicaoOcupada(Board,L2,C2,Colunas,N4),
-    posicaoOcupada(Board,L2,C3,Colunas,N5),
-    NumV is N1 + N2 + N3 + N4 + N5.
+    is_ocuppied_position(Board,L2,C1,Columns,N3),
+    is_ocuppied_position(Board,L2,C2,Columns,N4),
+    is_ocuppied_position(Board,L2,C3,Columns,N5),
+    NumAdj is N1 + N2 + N3 + N4 + N5.
 
 %        C1  C2  C3  %
 %  L1    1   2   3   %
 %  L2    4   P   5   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L =:= Linhas-1, C > 0, C < Colunas-1, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L =:= Lines-1, C > 0, C < Columns-1, !, 
     L1 is L - 1, 
     L2 is L,
     C1 is C - 1,
     C2 is C,
     C3 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
-    posicaoOcupada(Board,L1,C3,Colunas,N3),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
+    is_ocuppied_position(Board,L1,C3,Columns,N3),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N4),
-    posicaoOcupada(Board,L2,C3,Colunas,N5),
-    NumV is N1 + N2 + N3 + N4 + N5.
+    is_ocuppied_position(Board,L2,C1,Columns,N4),
+    is_ocuppied_position(Board,L2,C3,Columns,N5),
+    NumAdj is N1 + N2 + N3 + N4 + N5.
 
 %        C1  C2  %
 %  L1    1   2   %
 %  L2    P   3   %
 %  L3    4   5   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L > 0, L < Linhas-1, C =:= 0, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L > 0, L < Lines-1, C =:= 0, !, 
     L1 is L - 1, 
     L2 is L,
     L3 is L + 1,
     C1 is C,
     C2 is C + 1,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C2,Colunas,N3),
+    is_ocuppied_position(Board,L2,C2,Columns,N3),
     %%  L3  %%
-    posicaoOcupada(Board,L3,C1,Colunas,N4),
-    posicaoOcupada(Board,L3,C2,Colunas,N5),
-    NumV is N1 + N2 + N3 + N4 + N5.
+    is_ocuppied_position(Board,L3,C1,Columns,N4),
+    is_ocuppied_position(Board,L3,C2,Columns,N5),
+    NumAdj is N1 + N2 + N3 + N4 + N5.
 
 
 %        C1  C2  %
 %  L1    1   2   %
 %  L2    3   P   %
 %  L3    4   5   %
-contaVizinhas(Board, L, C, Linhas, Colunas, NumV) :-
-    L > 0, L < Linhas-1, C =:= Colunas-1, !, 
+adjacent_pieces(Board, L, C, Lines, Columns, NumAdj) :-
+    L > 0, L < Lines-1, C =:= Columns-1, !, 
     L1 is L - 1, 
     L2 is L,
     L3 is L + 1,
     C1 is C - 1,
     C2 is C,
     %%  L1  %%
-    posicaoOcupada(Board,L1,C1,Colunas,N1),
-    posicaoOcupada(Board,L1,C2,Colunas,N2),
+    is_ocuppied_position(Board,L1,C1,Columns,N1),
+    is_ocuppied_position(Board,L1,C2,Columns,N2),
     %%  L2  %%
-    posicaoOcupada(Board,L2,C1,Colunas,N3),
+    is_ocuppied_position(Board,L2,C1,Columns,N3),
     %%  L3  %%
-    posicaoOcupada(Board,L3,C1,Colunas,N4),
-    posicaoOcupada(Board,L3,C2,Colunas,N5),
-    NumV is N1 + N2 + N3 + N4 + N5.
+    is_ocuppied_position(Board,L3,C1,Columns,N4),
+    is_ocuppied_position(Board,L3,C2,Columns,N5),
+    NumAdj is N1 + N2 + N3 + N4 + N5.
 
-
-posicaoOcupada(Board, L, C, Colunas, Ocupada) :-
+/* Verifica se uma posicao (L,C) do tabuleiro está ocupada ou nao.
+Em caso afirmativo , Occupied = 1, senao, Occupied = 0 */
+is_ocuppied_position(Board, L, C, Columns, Occupied) :-
     append(Board, BoardList),
-    Num is (L * Colunas) + C,
-    nth0(Num, BoardList, Peca),
-    empty_cel(Peca),
-    Ocupada is 0.
-posicaoOcupada(_, _, _, _, 1).
+    Num is (L * Columns) + C,
+    nth0(Num, BoardList, Piece),
+    empty_cel(Piece), !,
+    Occupied = 0.
+is_ocuppied_position(_, _, _, _, 1).
 
 %%%---------------------------------------------------%%%
 %%%     Calcula os movimentos possiveis de uma peca   %%% 
 %%%---------------------------------------------------%%%
-%%%     Movimento Horizontal     %%%
-movimentoHorizontal(J, Board, LinP, ColP, Colunas, NumV, MovH) :-
-    nth0(LinP, Board, Linha),
-    movimentoDireita(J, LinP, ColP, Linha, Colunas, NumV, MovHD),
-    movimentoEsquerda(J, LinP, ColP, Linha, NumV, MovHE),
-    append(MovHE,MovHD, MovH).
+/* Horizontal Movement */
+move_horizontal(Player, Board, LinP, ColP, Columns, NumAdj, MovH) :-
+    nth0(LinP, Board, Line),
+    move_right(Player, LinP, ColP, Line, Columns, NumAdj, MovR),
+    move_left(Player, LinP, ColP, Line, NumAdj, MovL),
+    append(MovL,MovR, MovH).
 
-movimentoDireita(J, LinP, ColP, Linha, Colunas, NumV, MovHD) :-
-    NovaCol is ColP + NumV,
-    NovaCol < Colunas,
-    nth0(NovaCol, Linha, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovHD = [LinP-ColP-LinP-NovaCol-NovoJ].
-movimentoDireita(_, _, _, _, _, _, []).
+move_right(Player, LinP, ColP, Line, Columns, NumAdj, MovR) :-
+    NewC is ColP + NumAdj,
+    NewC < Columns,
+    nth0(NewC, Line, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovR = [LinP-ColP-LinP-NewC-NewPlayer].
+move_right(_, _, _, _, _, _, []).
 
-movimentoEsquerda(J, LinP, ColP, Linha, NumV, MovHE) :-
-    NovaCol is ColP - NumV,
-    NovaCol >= 0,
-    nth0(NovaCol, Linha, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovHE = [LinP-ColP-LinP-NovaCol-NovoJ].
-movimentoEsquerda(_, _, _, _, _, []).
+move_left(Player, LinP, ColP, Line, NumAdj, MovL) :-
+    NewC is ColP - NumAdj,
+    NewC >= 0,
+    nth0(NewC, Line, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovL = [LinP-ColP-LinP-NewC-NewPlayer].
+move_left(_, _, _, _, _, []).
 
-%%%       Movimento Vertical       %%%
-movimentoVertical(J, Board, LinP, ColP, Linhas, NumV, MovV) :-
-    movimentoCima(J, Board, LinP, ColP, NumV, MovC),
-    movimentoBaixo(J, Board, LinP, ColP, Linhas, NumV, MovB),
-    append(MovC, MovB, MovV).
+/* Vertical Movement */
+move_vertical(Player, Board, LinP, ColP, Lines, NumAdj, MovV) :-
+    move_up(Player, Board, LinP, ColP, NumAdj, MovU),
+    move_down(Player, Board, LinP, ColP, Lines, NumAdj, MovD),
+    append(MovU, MovD, MovV).
 
-movimentoCima(J, Board, LinP, ColP, NumV, MovC) :-
-    NovaL is LinP - NumV,
-    NovaL >= 0,
-    nth0(NovaL, Board, new_line),
-    nth0(ColP, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovC = [LinP-ColP-NovaL-ColP-NovoJ].
-movimentoCima(_, _, _, _, _, []).
+move_up(Player, Board, LinP, ColP, NumAdj, MovU) :-
+    NewL is LinP - NumAdj,
+    NewL >= 0,
+    nth0(NewL, Board, NewLine),
+    nth0(ColP, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovU = [LinP-ColP-NewL-ColP-NewPlayer].
+move_up(_, _, _, _, _, []).
 
-movimentoBaixo(J, Board, LinP, ColP, Linhas, NumV, MovB) :-
-    NovaL is LinP + NumV,
-    NovaL < Linhas,
-    nth0(NovaL, Board, new_line),
-    nth0(ColP, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovB = [LinP-ColP-NovaL-ColP-NovoJ].
-movimentoBaixo(_, _, _, _, _, _, []).
+move_down(Player, Board, LinP, ColP, Lines, NumAdj, MovD) :-
+    NewL is LinP + NumAdj,
+    NewL < Lines,
+    nth0(NewL, Board, NewLine),
+    nth0(ColP, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovD = [LinP-ColP-NewL-ColP-NewPlayer].
+move_down(_, _, _, _, _, _, []).
 
-%%%       Movimento Diagonal       %%%
-movimentoDiagonal(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovD) :- 
-    movimentoCimaEsquerda(J, Board, LinP, ColP, NumV, MovCE),
-    movimentoCimaDireita(J, Board, LinP, ColP, Colunas, NumV, MovCD),
-    movimentoBaixoEsquerda(J, Board, LinP, ColP, Linhas, NumV, MovBE),
-    movimentoBaixoDireita(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovBD),
-    append(MovCE, MovCD, Mov1),
-    append(Mov1, MovBE, Mov2),
-    append(Mov2, MovBD, MovD).
+/* Diagonal Movement */
+move_diagonal(Player, Board, LinP, ColP, Lines, Columns, NumAdj, MovD) :- 
+    move_up_left(Player, Board, LinP, ColP, NumAdj, MovUL),
+    move_up_right(Player, Board, LinP, ColP, Columns, NumAdj, MovUR),
+    move_down_left(Player, Board, LinP, ColP, Lines, NumAdj, MovDL),
+    move_down_right(Player, Board, LinP, ColP, Lines, Columns, NumAdj, MovDR),
+    append(MovUL, MovUR, Mov1),
+    append(Mov1, MovDL, Mov2),
+    append(Mov2, MovDR, MovD).
 
-movimentoCimaEsquerda(J, Board, LinP, ColP, NumV, MovCE) :- 
-    NovaL is LinP - NumV,
-    NovaL >= 0,
-    NovaC is ColP - NumV,
-    NovaC >= 0,
-    nth0(NovaL, Board, new_line),
-    nth0(NovaC, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovCE = [LinP-ColP-NovaL-NovaC-NovoJ].
-movimentoCimaEsquerda(_, _, _, _, _, []).
+move_up_left(Player, Board, LinP, ColP, NumAdj, MovUL) :- 
+    NewL is LinP - NumAdj,
+    NewL >= 0,
+    NewC is ColP - NumAdj,
+    NewC >= 0,
+    nth0(NewL, Board, NewLine),
+    nth0(NewC, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovUL = [LinP-ColP-NewL-NewC-NewPlayer].
+move_up_left(_, _, _, _, _, []).
 
-movimentoCimaDireita(J, Board, LinP, ColP, Colunas, NumV, MovCD) :- 
-    NovaL is LinP - NumV,
-    NovaL >= 0,
-    NovaC is ColP + NumV,
-    NovaC < Colunas,
-    nth0(NovaL, Board, new_line),
-    nth0(NovaC, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovCD = [LinP-ColP-NovaL-NovaC-NovoJ].
-movimentoCimaDireita(_, _, _, _, _, _, []).
+move_up_right(Player, Board, LinP, ColP, Columns, NumAdj, MovUR) :- 
+    NewL is LinP - NumAdj,
+    NewL >= 0,
+    NewC is ColP + NumAdj,
+    NewC < Columns,
+    nth0(NewL, Board, NewLine),
+    nth0(NewC, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovUR = [LinP-ColP-NewL-NewC-NewPlayer].
+move_up_right(_, _, _, _, _, _, []).
 
-movimentoBaixoEsquerda(J, Board, LinP, ColP, Linhas, NumV, MovBE) :-
-    NovaL is LinP + NumV,
-    NovaL < Linhas,
-    NovaC is ColP - NumV,
-    NovaC >= 0,
-    nth0(NovaL, Board, new_line),
-    nth0(NovaC, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovBE = [LinP-ColP-NovaL-NovaC-NovoJ].
-movimentoBaixoEsquerda(_, _, _, _, _, _, []).
+move_down_left(Player, Board, LinP, ColP, Lines, NumAdj, MovDL) :-
+    NewL is LinP + NumAdj,
+    NewL < Lines,
+    NewC is ColP - NumAdj,
+    NewC >= 0,
+    nth0(NewL, Board, NewLine),
+    nth0(NewC, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovDL = [LinP-ColP-NewL-NewC-NewPlayer].
+move_down_left(_, _, _, _, _, _, []).
 
-movimentoBaixoDireita(J, Board, LinP, ColP, Linhas, Colunas, NumV, MovBD) :-
-    NovaL is LinP + NumV,
-    NovaL < Linhas,
-    NovaC is ColP + NumV,
-    NovaC < Colunas,
-    nth0(NovaL, Board, new_line),
-    nth0(NovaC, new_line, NovoJ-NovaPeca),
-    (empty_cel(NovoJ-NovaPeca) ; NovoJ =\= J),
-    MovBD = [LinP-ColP-NovaL-NovaC-NovoJ].
-movimentoBaixoDireita(_, _, _, _, _, _, _, []).
+move_down_right(Player, Board, LinP, ColP, Lines, Columns, NumAdj, MovDR) :-
+    NewL is LinP + NumAdj,
+    NewL < Lines,
+    NewC is ColP + NumAdj,
+    NewC < Columns,
+    nth0(NewL, Board, NewLine),
+    nth0(NewC, NewLine, NewPlayer-NewPiece),
+    (empty_cel(NewPlayer-NewPiece) ; NewPlayer =\= Player),
+    MovDR = [LinP-ColP-NewL-NewC-NewPlayer].
+move_down_right(_, _, _, _, _, _, _, []).
