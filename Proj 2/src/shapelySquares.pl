@@ -10,74 +10,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%
 
 :- include('Utilitarios.pl').
+:- include('puzzles.pl').
 :- use_module(library(clpfd)).
 :- use_module(library(lists)).
-
-%% PUZZLE's with 7 types
-puzzle(1, [	[2,6,0,3,2,4,0],
-			[2,2,5,4,2,2,0],
-			[4,0,5,3,6,2,5],
-			[7,2,5,0,3,0,2],
-			[7,4,3,4,1,2,2],
-			[2,5,2,2,2,2,6],
-			[4,5,3,0,4,2,5]], [23,20,26,20,26,19,22]).
-			
-puzzle(2, [	[4,0,3,6,6,4,7],
-			[0,2,2,4,7,2,7],
-			[5,2,7,3,7,2,4],
-			[5,0,7,4,2,2,7],
-			[5,6,1,3,2,4,7],
-			[5,0,7,3,2,2,5],
-			[2,2,7,3,2,4,5]], [30,43,24,31,37,27,28]).
-
-puzzle(3, [ [1,0,4,3,2,2,2],
-			[0,5,7,4,2,2,2],
-			[5,5,7,3,2,4,7],
-			[4,2,2,4,3,6,7],
-			[7,2,3,4,7,7,2],
-			[7,4,3,7,5,2,2],
-			[6,0,3,7,2,2,4]], [19,29,21,18,25,39,17]).
-
-%% PUZZLE's with 5 types
-puzzle(4, [ [1,4,3,0],
-			[4,5,4,3],
-			[0,3,5,4],
-			[2,4,0,3],
-			[2,2,0,3]], [15,18,23,14,14]).
-
-puzzle(5, [ [0,3,1,4],
-			[2,2,0,3],
-			[2,3,5,4],
-			[4,0,3,5],
-			[5,3,2,1]], [28,18,21,22,12]).
-
-puzzle(6, [ [0,4,3,2],
-			[5,4,3,2],
-			[5,4,2,2],
-			[5,2,4,2],
-			[5,3,4,2]], [18,19,10,13,3]).
-			
-puzzle(7, [ [4,4,2,3],
-			[0,5,3,2],
-			[1,0,4,0],
-			[0,5,3,4],
-			[5,4,2,3]], [18,10,26,21,18]).
-
-puzzle(8, [ [0,3,2,2,3,4,0],
-			[2,2,2,3,4,5,4],
-			[0,2,3,4,1,4,2],
-			[4,0,4,3,0,2,2],
-			[5,3,5,3,4,0,2],
-			[0,0,0,0,5,2,2],
-			[5,5,5,5,4,4,4]], [19,21,28,32,11,38,40]).
-
-puzzle(9, [ [2,2,2,3,4,2,0],
-			[2,2,0,3,4,2,2],
-			[4,2,2,3,4,0,2],
-			[5,3,2,3,4,5,2],
-			[4,2,0,2,2,2,2],
-			[5,3,5,4,4,0,2],
-			[2,3,4,1,0,4,2]], [20,23,24,24,18,31,24]).
 
 			
 shapely_square(PuzzleNo) :-
@@ -105,20 +40,22 @@ shapely_square(PuzzleNo) :-
 	LabelingRuntime is Stop - BeforeLabeling,  
 	TotalRuntime is Stop - Start, 
 	format('Runtime :\n  Before labeling : ~d\n  Labeling : ~d\n  Total : ~d\n',[ConstraintRuntime,LabelingRuntime,TotalRuntime]),
-	display_game(SolvedPuzzle,LineSums).
+	display_game(Puzzle, SolvedPuzzle, LineSums).
 	
 	
 new_puzzle([],[]).
 new_puzzle([Sum1|Sums], Puzzle):-
-	new_line(Sum1,Line),
+	new_line(9,Sum1,Line),
 	new_puzzle(Sums,P1),
 	append([Line],P1,Puzzle).
 
-new_line(Sum,Line):-
+new_line(Limit,Sum,Line):-
 	puzzle_size(X,_),
 	length(Line,X),
-	domain(Line,0,9),
+	domain(Line,0,Limit),
 	sum(Line,#=,Sum).
+	
+%%%%% Constraint apply
 
 apply_constraints(_,_,_,Y):-
 	puzzle_size(_,YSize),
@@ -205,7 +142,9 @@ apply_constraint_cell(7,SolvedPuzzle,Puzzle,X,Y):-
 
 apply_constraint_cell(_,_,_,_,_).
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    Auxiliar Functions    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 check_puzzle_limits(X,Y):- 
 	puzzle_size(XSize,YSize),
@@ -277,44 +216,95 @@ heart_constraint(SolvedPuzzle,Puzzle,X,Y,V):-
 	element(X,Line,V).
 heart_constraint(_,_,_,_,0).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    BOARD DISPLAY    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-display_game(Puzzle, Sums) :-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    Puzzle Generator    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+generate(XSize,YSize):-
+	new_puzzle(XSize,YSize,Puzzle),
+	length(LineSums,YSize),
+	domain(LineSums,0,100),
+	all_distinct(LineSums),
+	asserta(puzzle_size(XSize,YSize)),
+	new_puzzle(LineSums,SolvedPuzzle),
+
+	asserta(circle_value(0,0)),
+	apply_constraints(SolvedPuzzle,Puzzle,1,1),
+	append(SolvedPuzzle,List),
+	append(Puzzle,List1),
+	global_cardinality(List1,Var),
+	labeling([],List),
+	display_game(Puzzle, SolvedPuzzle, LineSums).
+	
+new_puzzle(_,0,[]).
+new_puzzle(XSize,YSize,Puzzle) :-
+	new_line_types(7,XSize,Line),
+	NextY is YSize - 1,
+	new_puzzle(XSize,NextY,P1),
+	append([Line],P1,Puzzle).
+
+new_line_types(Limit,Length,Line):-
+	length(Line,Length),
+	domain(Line,0,Limit).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    BOARD DISPLAY    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+display_game(Puzzle, SolvedPuzzle, Sums) :-
 	nth1(1,Puzzle,Line),
 	length(Line,Col),
-    display_puzzle(Puzzle, Sums, Col),nl.
+    display_puzzle(Puzzle,SolvedPuzzle,Sums,Col),nl.
 
 /* Imprime o separador de linhas */
 display_lin_separ(Col) :-
 	space(1),
     write('-----'),
     N1 is Col - 1,
-    display_lin_separ(N1, Col).
+    display_lin_separ(N1, Col),
+	write('       '),write('-----'),
+	display_lin_separ(N1, Col), nl.
 display_lin_separ(N, Col) :-
     N > 0, !,
     write('----'),
     N1 is N - 1,
     display_lin_separ(N1, Col).
-display_lin_separ(0, _) :- nl.
+display_lin_separ(0,_).
 
 /* Imprime o tabuleiro */
-display_puzzle([L|T],[Sum|Sums] , Col) :-
+display_puzzle([L|T],[Solved|SolvedPuzzle],[Sum|Sums] , Col) :-
     display_lin_separ(Col),
 	write(' | '),
-	display_line(L),
-	write(Sum),
+	display_line(puzzle,L),
+	write_sum(Sum),
+	write('    | '),
+	display_line(solution,Solved),
+	write_sum(Sum),
     new_line(1),
-    display_puzzle(T, Sums, Col).
+    display_puzzle(T, SolvedPuzzle, Sums, Col).
 
-display_puzzle([], [], Col) :- display_lin_separ(Col).
+display_puzzle([], [], [], Col) :- display_lin_separ(Col).
 
 
 /* Imprime a linha com o numero da pecas */
-display_line([]).
-display_line([C|L]) :-
+display_line(_,[]).
+display_line(puzzle,[C|L]) :-
+    write_type(C),
+	write(' | '),
+    display_line(puzzle,L).
+
+display_line(solution,[C|L]) :-
     write(C),
 	write(' | '),
-    display_line(L).
+    display_line(solution,L).
 
+write_sum(Sum):- Sum >= 10, write(Sum).
+write_sum(Sum):- Sum < 10, write(' '), write(Sum).
 
+write_type(0):- write(' ').
+write_type(1):- write('S').
+write_type(2):- write('Q').
+write_type(3):- write('D').
+write_type(4):- write('C').
+write_type(5):- write('T').
+write_type(6):- write('K').
+write_type(7):- write('H').
