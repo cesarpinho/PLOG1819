@@ -47,6 +47,8 @@ start :-
     ).
 
 generate_menu :-
+	write('Digite um valor entre 2 e 9 (inclusive)\n')
+	
 	write(' Columns :'),
     get_code(Code),
     skip_line,    
