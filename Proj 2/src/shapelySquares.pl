@@ -43,12 +43,11 @@ start :-
 		Choice =:= 2 -> generate_menu;
         Choice =:= 3 -> about_menu;
         Choice =:= 4;
-        start_menu  
+        start
     ).
 
 generate_menu :-
-	write('Digite um valor entre 2 e 9 (inclusive)\n')
-	
+	write('Digite um valor entre 2 e 9 (inclusive)\n'),	
 	write(' Columns :'),
     get_code(Code),
     skip_line,    
@@ -77,7 +76,7 @@ about_menu :-
     skip_line,    
     Choice is Code - 48,
     ( 
-        Choice =:= 4 -> start_menu;
+        Choice =:= 4 -> start;
         about_menu  
     ). 
 			
