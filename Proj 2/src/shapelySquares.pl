@@ -14,6 +14,70 @@
 :- use_module(library(clpfd)).
 :- use_module(library(lists)).
 
+display_header :-
+    write('*******************************************************\n'),
+    write('****                                               ****\n'),
+    write('****                 Shapely Squares               ****\n'),
+    write('****                                               ****\n'),
+    write('*******************************************************\n').
+
+display_start_menu :-
+    display_header,
+    write('****                                               ****\n'),
+    write('****                    1 - Solucao                ****\n'),
+    write('****                    2 - Geracao                ****\n'),
+    write('****                    3 - About                  ****\n'),
+    write('****                    4 - Sair                   ****\n'),
+    write('****                                               ****\n'),
+    write('*******************************************************\n').
+
+start :- 
+	NumberOfPuzzle is 1,	
+    clr,
+    display_start_menu,
+    get_code(Code),
+    skip_line,    
+	Choice is Code - 48,
+    (
+        Choice =:= 1 -> shapely_square(NumberOfPuzzle);
+		Choice =:= 2 -> generate_menu;
+        Choice =:= 3 -> about_menu;
+        Choice =:= 4;
+        start_menu  
+    ).
+
+generate_menu :-
+	write(' Columns :'),
+    get_code(Code),
+    skip_line,    
+	XSize is Code - 48,
+	write(' Lines :'),
+	get_code(Code),
+    skip_line,    
+	YSize is Code - 48,
+    generate(XSize,YSize).
+
+display_about_menu :-
+    display_header,
+    write('****                                               ****\n'),
+    write('****                    Autores:                   ****\n'),
+	write('****                - Angelo Moura                 ****\n'),
+	write('****                - Cesar Pinho                  ****\n'),
+	write('****                                               ****\n'),
+	write('****                   4 - Voltar                  ****\n'),
+    write('****                                               ****\n'),
+    write('*******************************************************\n').
+
+about_menu :- 
+    clr,
+    display_about_menu,
+    get_code(Code),
+    skip_line,    
+    Choice is Code - 48,
+    ( 
+        Choice =:= 4 -> start_menu;
+        about_menu  
+    ). 
 			
 shapely_square(PuzzleNo) :-
 	statistics(walltime,[Start|_]),
@@ -56,7 +120,6 @@ new_line(Limit,Sum,Line):-
 	sum(Line,#=,Sum).
 	
 %%%%% Constraint apply
-
 apply_constraints(_,_,_,Y):-
 	puzzle_size(_,YSize),
 	Y #> YSize .
@@ -74,6 +137,7 @@ apply_constraints(SolvedPuzzle,Puzzle,X,Y):-
 	NewX #= X + 1,
 	apply_constraints(SolvedPuzzle,Puzzle,NewX,Y).
 
+%% Apply constraints to a cell 
 apply_constraint_cell(1,SolvedPuzzle,_,X,Y):-
 	nth1(Y,SolvedPuzzle,Line),
 	element(X, Line,V1), V1 in {2,3,5,7},
@@ -142,14 +206,15 @@ apply_constraint_cell(7,SolvedPuzzle,Puzzle,X,Y):-
 
 apply_constraint_cell(_,_,_,_,_).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    Auxiliar Functions    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    Auxiliar Functions    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 check_puzzle_limits(X,Y):- 
 	puzzle_size(XSize,YSize),
 	X #=< XSize #/\ X #> 0 #/\ Y #=< YSize #/\ Y #> 0.
 
+%% Apply the star constraint to neighbord (X,Y)
 star_constraint(SolvedPuzzle,X,Y):-
 	check_puzzle_limits(X,Y),
 	nth1(Y,SolvedPuzzle,Line),
@@ -157,6 +222,7 @@ star_constraint(SolvedPuzzle,X,Y):-
 	V in {0,4,6,8,9}.
 star_constraint(_,_,_).
 
+%% Apply the square constraint to neighbord (X,Y)
 square_constraint(SolvedPuzzle,Puzzle,X,Y,V):-
 	check_puzzle_limits(X,Y),
 	nth1(Y,Puzzle,L),
@@ -167,6 +233,11 @@ square_constraint(SolvedPuzzle,Puzzle,X,Y,V):-
 	V1 #\= V.
 square_constraint(_,_,_,_,_).
 
+%% Apply the circle constraint to the cell (X,Y)
+%% If a circle of the puzzle has already been applied, 
+%% apply the restriction of equality, 
+%% otherwise apply the general restriction of a circle 
+%% and save the position of that circle with an assert.
 circle_constraint(SolvedPuzzle,X,Y):-
 	circle_value(X1,Y1),
 	X1 > 0,
@@ -182,6 +253,8 @@ circle_constraint(SolvedPuzzle,X,Y):-
 	V mod 3 #\= 0,
 	asserta((circle_value(X,Y))).
 
+%% Maps an identifier to the values of the 
+%% increment of X and Y to a knight attack position
 knight_attack_range(1,1,-2).
 knight_attack_range(2,2,-1).
 knight_attack_range(3,2,1).
@@ -191,6 +264,7 @@ knight_attack_range(6,-2,1).
 knight_attack_range(7,-2,-1).
 knight_attack_range(8,-1,-2).
 
+%% Apply the knight constraint to all acttack positions
 knight_constraint(_,_,_,9,0).
 knight_constraint(SolvedPuzzle,X,Y,AttackId,Count):-
 	knight_attack_range(AttackId,IncX,IncY),
@@ -207,6 +281,8 @@ knight_constraint(SolvedPuzzle,X,Y,AttackId,Count):-
 	NewAttackId #= AttackId + 1,
 	knight_constraint(SolvedPuzzle,X,Y,NewAttackId,Count).
 
+%% Return the Variable in the position (X,Y) if is a heart type,
+%% otherwise return 0.
 heart_constraint(SolvedPuzzle,Puzzle,X,Y,V):-
 	check_puzzle_limits(X,Y),
 	nth1(Y,Puzzle,TypeLine),
@@ -231,8 +307,6 @@ generate(XSize,YSize):-
 	asserta(circle_value(0,0)),
 	apply_constraints(SolvedPuzzle,Puzzle,1,1),
 	append(SolvedPuzzle,List),
-	append(Puzzle,List1),
-	global_cardinality(List1,Var),
 	labeling([],List),
 	display_game(Puzzle, SolvedPuzzle, LineSums).
 	
@@ -253,7 +327,18 @@ new_line_types(Limit,Length,Line):-
 display_game(Puzzle, SolvedPuzzle, Sums) :-
 	nth1(1,Puzzle,Line),
 	length(Line,Col),
+	display_legend,
     display_puzzle(Puzzle,SolvedPuzzle,Sums,Col),nl.
+
+display_legend :-
+	nl,
+	write('  S - Star\n'),
+	write('  Q - Square\n'),
+	write('  D - Diamond\n'),
+	write('  C - Circle\n'),
+	write('  T - Triangle\n'),
+	write('  K - Knight\n'),
+	write('  H - Heart\n\n').
 
 /* Imprime o separador de linhas */
 display_lin_separ(Col) :-
